@@ -1,7 +1,22 @@
 
+
 # mcp-lubrication API (v1)
 
 This document describes the API for the `mcp-lubrication` tool, designed for agentic models and developer tools to log, track, and resolve sources of friction in codebases and workflows. The API is machine-oriented, with a focus on automation, auditability, and integration with CI, issue trackers, and other MCP servers.
+
+---
+
+## General Conventions
+
+- All endpoints are under `/v1/`.
+- All requests and responses use `application/json` unless otherwise specified.
+- All timestamps are ISO 8601 strings (UTC).
+- All endpoints require authentication unless noted.
+- Pagination is supported via `limit` and `offset` query parameters.
+- Filtering is supported via query parameters as described per endpoint.
+- All error responses use the structure described in the Errors section.
+
+---
 
 ---
 
@@ -129,11 +144,12 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
 ---
 
 
+
 ### List Friction Points
 
 **GET** `/v1/friction-points`
 
-- **Description:** Retrieve a list of all logged friction points, with optional filters.
+- **Description:** Retrieve a list of all logged friction points, with optional filters and pagination.
 - **Query Parameters:**
   - `status` ("open", "resolved", "all")
   - `tag` (string)
@@ -144,10 +160,12 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
   - `created_before` (ISO date)
   - `repo` (string)
   - `branch` (string)
-  - `limit` (integer, default 50)
+  - `limit` (integer, default 50, max 500)
   - `offset` (integer, for pagination)
 
-- **Response:** Array of friction point summaries.
+- **Response:**
+  - Array of friction point summaries.
+  - Pagination metadata is included in response headers: `X-Total-Count`, `X-Limit`, `X-Offset`.
   ```json
   [
     {
@@ -160,6 +178,146 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
     }
   ]
   ```
+### Comment on a Friction Point
+
+**POST** `/v1/friction-points/{id}/comments`
+
+- **Description:** Add a comment to a friction point for discussion or clarification.
+- **Request Body:**
+  - `comment` (string, required)
+  - `agent` (string, required)
+
+- **Response:**
+  ```json
+  {
+    "id": "comment-id",
+    "created_at": "..."
+  }
+  ```
+
+---
+
+### Assign a Friction Point
+
+**PUT** `/v1/friction-points/{id}/assign`
+
+- **Description:** Assign a friction point to a user or agent for remediation.
+- **Request Body:**
+  - `assigned_to` (string, required)
+  - `agent` (string, required)
+
+- **Response:**
+  ```json
+  {
+    "id": "unique-friction-id",
+    "assigned_to": "user-or-agent-id"
+  }
+  ```
+
+---
+
+### Push Friction Point to Issue Tracker
+
+**POST** `/v1/friction-points/{id}/push-issue`
+
+- **Description:** Create an issue or PR in a configured external tracker and link the resulting ID.
+- **Request Body:**
+  - `tracker_type` (string, required, e.g., "github", "jira")
+  - `agent` (string, required)
+  - `notes` (string, optional)
+
+- **Response:**
+  ```json
+  {
+    "reference": { "type": "github", "url": "https://...", "id": 123 }
+  }
+  ```
+
+---
+
+### Apply Suggestion to Friction Point
+
+**POST** `/v1/friction-points/{id}/apply-suggestion`
+
+- **Description:** Apply a provided or AI-generated patch to resolve a friction point. Requires `friction:apply` scope.
+- **Request Body:**
+  - `patch` (string, required)
+  - `agent` (string, required)
+  - `notes` (string, optional)
+
+- **Response:**
+  ```json
+  {
+    "status": "applied",
+    "pr_url": "https://..." // if a PR was created
+  }
+  ```
+
+---
+
+### Audit Log
+
+**GET** `/v1/audit`
+
+- **Description:** Retrieve a tamper-evident, machine-readable audit log of all changes.
+- **Query Parameters:**
+  - All filters as in List
+  - `action` (string, e.g., "created", "updated", "resolved", "assigned")
+- **Response:** Array of audit log entries.
+
+---
+
+### ML Endpoints
+
+**POST** `/v1/ml/train`
+
+- **Description:** Submit training data for model improvement.
+- **Request Body:**
+  - `data` (object or array, required)
+  - `agent` (string, required)
+
+- **Response:**
+  ```json
+  { "status": "training_started" }
+  ```
+
+**GET** `/v1/ml/insights`
+
+- **Description:** Fetch model-based predictions and suggested remediations.
+- **Query Parameters:**
+  - `friction_id` (string, optional)
+- **Response:** Array of insights or predictions.
+
+---
+## Attachments
+
+- Attachments can be uploaded via presigned URLs or multipart upload endpoints (e.g., `/v1/friction-points/{id}/attachments`).
+- To retrieve, use the URLs provided in the `attachments` array of a friction point.
+- Attachments metadata includes `filename`, `url`, and `content_type`.
+
+---
+## Rate Limiting
+
+- Rate limits are enforced per token and returned in headers:
+  - `X-RateLimit-Limit`: Maximum requests per period
+  - `X-RateLimit-Remaining`: Requests left in current period
+  - `X-RateLimit-Reset`: Time when the limit resets (epoch seconds)
+- Exceeding the limit returns HTTP 429 with an error response.
+
+---
+## Internationalization / Localization
+
+- Error messages and summaries are returned in English by default.
+- Clients may request a different language via the `Accept-Language` header (future support).
+
+---
+## Changelog & Deprecation Policy
+
+- Breaking changes are announced at least 90 days in advance.
+- Deprecated endpoints return a `Deprecation` header and a warning in the response body.
+- Changelog is published in the repository and via `/v1/changelog` (future endpoint).
+
+---
 
 ---
 
@@ -415,6 +573,7 @@ mcp-lubrication resolve --id <id> --notes "Fixed by reorganizing retry behavior"
 ---
 
 
+
 ## Errors & Response Codes
 
 - All error responses use a consistent structure:
@@ -425,15 +584,53 @@ mcp-lubrication resolve --id <id> --notes "Fixed by reorganizing retry behavior"
     "fields": ["summary"]
   }
   ```
+- Common `error_code` values:
+  - `BadRequest`
+  - `Unauthorized`
+  - `Forbidden`
+  - `NotFound`
+  - `RateLimitExceeded`
+  - `InternalError`
+  - `NotImplemented`
+  - `Conflict`
 - Status codes:
   - 200: OK
   - 201: Created
+  - 204: No Content
   - 400: Bad request/validation errors
   - 401: Unauthorized
   - 403: Forbidden
   - 404: Not found
+  - 409: Conflict
+  - 410: Gone (for removed endpoints)
   - 429: Rate limit exceeded
   - 500: Internal server error
+
+---
+## Webhook Security Example
+
+Webhook payloads are signed using HMAC SHA256 with a shared secret. Example header:
+
+`X-Hub-Signature-256: sha256=abcdef123456...`
+
+To verify:
+1. Compute the HMAC SHA256 of the request body using your secret.
+2. Compare the hex digest to the value in the header.
+
+---
+## Example Workflows
+
+### Typical Friction Lifecycle
+
+1. Log a friction point (`POST /v1/friction-points`)
+2. Add a comment (`POST /v1/friction-points/{id}/comments`)
+3. Assign to a user/agent (`PUT /v1/friction-points/{id}/assign`)
+4. Push to issue tracker (`POST /v1/friction-points/{id}/push-issue`)
+5. Resolve (`PATCH /v1/friction-points/{id}`)
+6. Apply a suggestion (`POST /v1/friction-points/{id}/apply-suggestion`)
+7. Review audit log (`GET /v1/audit`)
+
+---
 
 ---
 
@@ -462,6 +659,54 @@ Agents and CI systems can call `POST /v1/ci/log` or `/v1/friction-points` direct
 - Environment variables: `MCP_PORT`, `MCP_BASE_URL`, `DB_CONN`, `JWT_SECRET`, `WEBHOOK_SECRET`.
 - CLI supports `--config` or `--mcp-config` flags.
 - Minimal requirement: database (sqlite, postgres); local/disk storage for attachments is supported.
+
+## Deployment & Configuration Notes
+
+- See `README.md` for an example `mcp.json` for VSCode.
+- CLI supports `--config` or `--mcp-config` flags.
+- Minimal requirement: database (sqlite, postgres); local/disk storage for attachments is supported.
+
+### Environment variables (recommended)
+
+These are the environment variables the implementation should respect. Where possible, reasonable defaults are suggested for local development; production deployments should override with secure values.
+
+- `MCP_PORT` (default: `3000`) — port the HTTP API listens on.
+- `MCP_BASE_URL` (default: `http://localhost:3000`) — externally visible base URL.
+- `DB_CONN` (default: `sqlite://./data/mcp.db`) — database connection string (sqlite for local/dev, postgres for production).
+- `DB_POOL_SIZE` (default: `10`) — connection pool size for production DBs.
+- `STORAGE_PROVIDER` (default: `local`) — `local` or `s3` (affects attachments handling).
+- `JWT_SECRET` (no default; required) — HMAC secret for signing/validating tokens. Must be a secure random value in production.
+- `WEBHOOK_SECRET` (no default; optional) — per-webhook secret used to sign outbound webhook payloads.
+- `ADMIN_TOKEN` (optional) — short-lived admin token for bootstrap operations (avoid long-lived secrets).
+- `RATE_LIMIT_WINDOW_MS` (default: `60000`) — sliding window for rate limiting in milliseconds.
+- `RATE_LIMIT_MAX` (default: `100`) — default allowed requests per token per `RATE_LIMIT_WINDOW_MS`.
+- `RATE_LIMIT_BURST` (default: `200`) — maximum burst capacity (allow short bursts above normal rate).
+- `LOG_LEVEL` (default: `info`) — runtime logging level.
+
+### Sane security & rate-limiting defaults
+
+The API design assumes conservative defaults to protect deployments out-of-the-box. Implementations should use these defaults and allow operators to override via env vars or config.
+
+- Authentication: require a token or API key on all non-public endpoints. Tokens should be scoped (`friction:read`, `friction:write`, `friction:apply`, `friction:admin`).
+- JWT secret: `JWT_SECRET` must be set in production and rotated periodically. Reject unsigned or expired tokens.
+- Webhook signing: sign webhook payloads with `WEBHOOK_SECRET` and include an `X-Hub-Signature-256` header.
+- Rate limiting: default to `RATE_LIMIT_MAX=100` requests per `RATE_LIMIT_WINDOW_MS=60000` (100/minute) with `RATE_LIMIT_BURST=200` to allow short bursts. Return `Retry-After` and the `X-RateLimit-*` headers on 429 responses.
+- Abuse mitigation: implement exponential backoff and temporary token suspension for repeated abuse; log and surface suspicious activity to audit logs.
+
+### Docker (illustrative)
+
+When a runnable image exists, the following pattern is recommended for local development:
+
+```bash
+docker build -t mcp-lubrication:dev .
+docker run --rm -p 3000:3000 \
+  -e MCP_PORT=3000 \
+  -e JWT_SECRET=devsecret \
+  -e DB_CONN=sqlite:///data/mcp.db \
+  mcp-lubrication:dev
+```
+
+Production deployments should mount persistent storage for attachments and use a managed database (Postgres) and a secure secrets manager for `JWT_SECRET` and webhook secrets.
 
 ---
 

@@ -1,62 +1,48 @@
-mcp-lubrication is a developer tool designed to help identify, document, and resolve sources of friction within a codebase—especially those that make tools or workflows confusing or difficult to use. By providing a structured way to note pain points and track their resolution, mcp-lubrication helps teams continuously improve the developer experience.
+
 # mcp-lubrication
 
-`mcp-lubrication` is an **mcp server** designed for use by agentic models—not humans directly. Its purpose is to help models identify, document, and resolve sources of friction within codebases and developer tools, especially those that make automated workflows confusing or inefficient.
+This repository is currently a design-phase specification for an MCP server and API to help agentic models and automation log, track, and resolve sources of friction in developer workflows.
 
-## Overview
+Important: absolutely nothing in this repository is implemented yet — the project is in the design/spec phase. The files in this repo (including `API.md` and `QUICKSTART.md`) describe planned behavior, data models, and examples for implementation.
 
-When agentic models interact with complex systems or tools (such as other mcp servers), they may encounter confusing behaviors, unclear interfaces, or workflow bottlenecks. `mcp-lubrication` provides structured APIs for models to:
+If you expected a working server, see `QUICKSTART.md` and `API.md` for planned usage and examples, then consider contributing an implementation.
 
-- **Log friction points:** Record issues, confusing patterns, or pain points as they are encountered during automated workflows.
-- **Track and resolve:** Organize, prioritize, and resolve these issues to improve the developer and model experience.
-- **Document improvements:** Maintain a machine-readable history of friction points and their resolution, supporting continuous improvement.
+**Quick facts**
+- Status: Design / specification only (no runtime yet)
+- Tests: `pnpm test` is the standard test command for this repo
+- Package manager: `pnpm`
 
-## Intended Usage
+**Where to look next**
+- Read the design and examples in `API.md` and `QUICKSTART.md`.
+- If you'd like to implement features, follow `CONTRIBUTING.md` (adapted for this repo).
 
-`mcp-lubrication` is not intended for direct human use. Instead, it is called by agentic models (such as those orchestrated by the mcp framework) to:
+**Examples and development**
+The `QUICKSTART.md` contains example requests and local-run snippets (illustrative). Example cURL and SDK snippets shown there are for guidance — they describe the intended API shape.
 
-1. **Note confusion:** Log what was confusing, where it occurred, and attach relevant context or examples.
-2. **Propose solutions:** Suggest code refactoring, documentation changes, or workflow adjustments to improve clarity and automation.
-3. **Track resolution:** Follow issues through to resolution, ensuring friction is addressed and improvements are recorded.
+Run example (design-time):
+```bash
+# Install dependencies (development)
+pnpm install
 
-## Features
+# Build step (if/when implemented)
+pnpm build
 
-- APIs for logging and querying friction points
-- Tools for automated tracking and prioritization
-- Integration with other mcp servers and agentic workflows
-- Machine-readable documentation of resolved pain points
+# Run tests
+pnpm test
+```
 
-## Getting Started
+**Docker (illustrative)**
+When an implementation exists, the intended Docker use will follow this pattern (example):
 
-1. **Install dependencies:**
-        ```bash
-        pnpm install
-        ```
-2. **Build the server:**
-        ```bash
-        pnpm build
-        ```
-3. **Configure as an mcp server:**
-        Create a configuration file for your mcp environment. For example, VSCode users can add to `.config/Code/User/mcp.json`:
-        ```json
-        {
-            "servers": {
-                "mcp-lubrication": {
-                    "type": "stdio",
-                    "command": "node",
-                    "args": [
-                        "/home/username/.local/share/GITS/mcp-lubrication"
-                    ]
-                }
-            },
-            "inputs": []
-        }
-        ```
+```bash
+# Build image (when Dockerfile implements the server)
+docker build -t mcp-lubrication:dev .
 
-## Contributing
+# Run with sane defaults for development
+docker run -e MCP_PORT=3000 -e JWT_SECRET=devsecret -p 3000:3000 mcp-lubrication:dev
+```
 
-If you are a model and encounter friction in this repository or with the `mcp-lubrication` server itself, use the provided APIs to log the issue. Human maintainers welcome pull requests that address logged friction points or improve the server for agentic use.
+**License**
+- This design is published under the repository `LICENSE` (see `LICENSE` in this repo).
 
-## License
-
-This project is licensed under the terms of the LICENSE file in this repository.
+If you want me to scaffold a minimal, runnable implementation (HTTP server + a few endpoints + tests), I can start that next — tell me your preferred database (sqlite/postgres) and I'll scaffold it.
