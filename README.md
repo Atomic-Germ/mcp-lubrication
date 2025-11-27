@@ -1,6 +1,8 @@
 
 # mcp-lubrication
 
+![status: design](https://img.shields.io/badge/status-design-orange) ![license-MIT](https://img.shields.io/badge/license-MIT-blue)
+
 This repository is currently a design-phase specification for an MCP server and API to help agentic models and automation log, track, and resolve sources of friction in developer workflows.
 
 Important: absolutely nothing in this repository is implemented yet — the project is in the design/spec phase. The files in this repo (including `API.md` and `QUICKSTART.md`) describe planned behavior, data models, and examples for implementation.
@@ -14,7 +16,7 @@ If you expected a working server, see `QUICKSTART.md` and `API.md` for planned u
 
 **Where to look next**
 - Read the design and examples in `API.md` and `QUICKSTART.md`.
-- If you'd like to implement features, follow `CONTRIBUTING.md` (adapted for this repo).
+- If you'd like to implement features, follow `CONTRIBUTING.md` (see `CONTRIBUTING.md`).
 
 **Examples and development**
 The `QUICKSTART.md` contains example requests and local-run snippets (illustrative). Example cURL and SDK snippets shown there are for guidance — they describe the intended API shape.

@@ -1,3 +1,37 @@
+## Deployment & Configuration Notes
+
+- See `README.md` for an example `mcp.json` for VSCode and example MCP integration.
+- CLI supports `--config` or `--mcp-config` flags.
+- Minimal requirement: database (sqlite, postgres); local/disk storage for attachments is supported.
+## Signing & Secrets
+
+- Webhook payloads must be signed with a secret. The server uses `X-Hub-Signature-256` (HMAC SHA256) for outbound webhook signatures.
+
+`X-Hub-Signature-256: sha256=abcdef123456...`
+
+To verify (example, bash/openssl):
+
+```bash
+# Incoming payload body in $BODY and incoming header in $RECEIVED
+WEBHOOK_SECRET=your_webhook_secret
+SIG_CALC="sha256=$(echo -n "$BODY" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | sed 's/^.*= //')"
+if [ "$SIG_CALC" = "$RECEIVED" ]; then
+  echo "valid"
+else
+  echo "invalid"
+fi
+```
+
+Or in Node.js (example):
+
+```js
+import crypto from 'crypto';
+
+function verify(body, secret, received) {
+  const h = crypto.createHmac('sha256', secret).update(body).digest('hex');
+  return `sha256=${h}` === received;
+}
+```
 
 
 # mcp-lubrication API (v1)
@@ -655,14 +689,8 @@ Agents and CI systems can call `POST /v1/ci/log` or `/v1/friction-points` direct
 
 ## Deployment & Configuration Notes
 
-- See `README.md` for an example `mcp.json` for VSCode.
+- See `README.md` for an example `mcp.json` for VSCode and example MCP integration.
 - Environment variables: `MCP_PORT`, `MCP_BASE_URL`, `DB_CONN`, `JWT_SECRET`, `WEBHOOK_SECRET`.
-- CLI supports `--config` or `--mcp-config` flags.
-- Minimal requirement: database (sqlite, postgres); local/disk storage for attachments is supported.
-
-## Deployment & Configuration Notes
-
-- See `README.md` for an example `mcp.json` for VSCode.
 - CLI supports `--config` or `--mcp-config` flags.
 - Minimal requirement: database (sqlite, postgres); local/disk storage for attachments is supported.
 

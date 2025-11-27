@@ -1,0 +1,208 @@
+openapi: 3.0.1
+info:
+  title: MCP Lubrication API
+  version: "1.0.0"
+  description: "Minimal OpenAPI spec for mcp-lubrication (core endpoints). This is a draft and intentionally minimal; please extend before generating SDKs."
+servers:
+  - url: http://localhost:3000
+paths:
+  /v1/auth/token:
+    post:
+      summary: Obtain a scoped token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                api_key:
+                  type: string
+              required: [api_key]
+      responses:
+        '200':
+          description: Token response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+  /v1/friction-points:
+    post:
+      summary: Log a new friction point
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FrictionPointCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  status:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      summary: List friction points
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: A list of friction point summaries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FrictionPointSummary'
+                  meta:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+  /v1/friction-points/{id}:
+    get:
+      summary: Get friction point details
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Friction point details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrictionPoint'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    TokenResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        scope:
+          type: string
+        expires_in:
+          type: integer
+    FrictionPointCreate:
+      type: object
+      required: [summary, details, location, agent]
+      properties:
+        summary:
+          type: string
+          maxLength: 240
+        details:
+          type: string
+        location:
+          type: string
+        context:
+          type: string
+        agent:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        proposed_solution:
+          type: string
+        priority:
+          type: string
+          enum: [low, medium, high]
+    FrictionPointSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        summary:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        priority:
+          type: string
+    FrictionPoint:
+      allOf:
+        - $ref: '#/components/schemas/FrictionPointCreate'
+        - type: object
+          properties:
+            id:
+              type: string
+            status:
+              type: string
+            created_at:
+              type: string
+            updated_at:
+              type: string
+            history:
+              type: array
+              items:
+                type: object
+  responses:
+    BadRequest:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      properties:
+        error_code:
+          type: string
+        message:
+          type: string
+        fields:
+          type: array
+          items:
+            type: string

@@ -35,16 +35,16 @@ cd mcp-lubrication
 pnpm install
 
 # Build the project (when implemented)
-pnpm build
+# pnpm build
 
-# Run tests
-pnpm test
+# Run tests (if implemented)
+# pnpm test
 
-# Run with coverage
-pnpm test:coverage
+# Run with coverage (if implemented)
+# pnpm test:coverage
 
-# Type checking
-pnpm typecheck
+# Type checking (if implemented)
+# pnpm typecheck
 ```
 
 ## 📋 Development Workflow
@@ -83,8 +83,9 @@ Follow our coding standards:
 - **State Management**: Ensure Lubrication cycle state is properly managed
 - **Framework Support**: Test with multiple test frameworks
 - **Complexity**: Keep functions under 10 cyclomatic complexity
--- **Formatting**: Use Prettier (`pnpm format`)
--- **Linting**: Follow ESLint rules (`pnpm lint`)
+ - **Complexity**: Keep functions under 10 cyclomatic complexity
+ - **Formatting**: Use Prettier (`pnpm format`) (if configured)
+ - **Linting**: Follow ESLint rules (`pnpm lint`) (if configured)
 
 ### 4. Test Your Changes
 
@@ -252,12 +253,14 @@ describe('LubricationStateManager', () => {
 
 ### Test Coverage Requirements
 
-High coverage standards:
+High coverage standards (long-term targets):
 
 - **Statements**: 95%
 - **Branches**: 90%
 - **Functions**: 95%
 - **Lines**: 95%
+
+These targets are ambitious — treat them as long-term goals. Initial implementations should aim for strong coverage and iterate toward these thresholds.
 
 ### Test Categories
 

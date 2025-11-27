@@ -1,3 +1,62 @@
+# Quickstart (design-time examples)
+
+This quickstart demonstrates the intended API usage with simple curl examples. The repository is currently a design/spec; these examples show the expected request/response shape.
+
+Prerequisites
+
+- A running implementation of `mcp-lubrication` (not included in this repo). Replace `MCP_URL` and `TOKEN` below with your server URL and token.
+
+Example: log a friction point
+
+```bash
+export MCP_URL=http://localhost:3000
+export TOKEN=REPLACE_WITH_YOUR_TOKEN
+
+curl -s -X POST "$MCP_URL/v1/friction-points" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "summary": "Confusing parameter order in API",
+    "details": "Parameters `x` and `y` are documented in the wrong order.",
+    "location": "repo:main:src/api.ts:123",
+    "agent": "agent:example:2025-11-27",
+    "tags": ["docs", "api"]
+  }'
+
+# Expected (201) response shape
+# { "id": "uuid", "status": "logged" }
+```
+
+Example: list friction points (paginated)
+
+```bash
+curl -s "$MCP_URL/v1/friction-points?limit=10&offset=0" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Response shape (example):
+# { "data": [{"id":"...","summary":"...","status":"open"}], "meta": {"total": 42, "limit": 10, "offset": 0 }}
+```
+
+Webhook verification (bash example)
+
+When configuring webhooks, the server signs outgoing payloads using HMAC SHA256 and the header `X-Hub-Signature-256: sha256=<hex>`.
+
+Example verification snippet using `openssl` (bash):
+
+```bash
+WEBHOOK_SECRET=your_webhook_secret
+BODY='{"id":"...","summary":"..."}'
+SIG="sha256=$(echo -n "$BODY" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | sed 's/^.*= //')"
+echo "Signature header: $SIG"
+
+# Compare to incoming header value (example)
+# if [ "$SIG" = "$RECEIVED_HEADER" ]; then echo "valid"; else echo "invalid"; fi
+```
+
+Notes
+
+- The auth/token endpoint shape is intentionally minimal in the design; implementing servers should support `Authorization: Bearer <token>` for protected endpoints.
+- For local development, use a short-lived token and do not use production secrets in examples above.
 
 # MCP Lubrication Server - Quick Start Guide
 
