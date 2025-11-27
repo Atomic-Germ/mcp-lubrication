@@ -3,6 +3,7 @@
 - See `README.md` for an example `mcp.json` for VSCode and example MCP integration.
 - CLI supports `--config` or `--mcp-config` flags.
 - Minimal requirement: database (sqlite, postgres); local/disk storage for attachments is supported.
+
 ## Signing & Secrets
 
 - Webhook payloads must be signed with a secret. The server uses `X-Hub-Signature-256` (HMAC SHA256) for outbound webhook signatures.
@@ -32,7 +33,6 @@ function verify(body, secret, received) {
   return `sha256=${h}` === received;
 }
 ```
-
 
 # mcp-lubrication API (v1)
 
@@ -76,6 +76,7 @@ All endpoints use a consistent data model for friction points. Field names use `
 - `history` (array): List of actions (created, updated, resolved)
 
 #### Extended Fields
+
 - `severity` ("critical" | "major" | "minor"): How blocking the friction is
 - `impact` (string): User or model impact
 - `occurrence_count` (integer): Aggregated count
@@ -102,7 +103,6 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
 
 ## Endpoints
 
-
 ### Log a Friction Point
 
 **POST** `/v1/friction-points`
@@ -119,6 +119,7 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
   - `priority` ("low" | "medium" | "high", optional)
 
   Example:
+
   ```json
   {
     "summary": "Short description of the friction",
@@ -133,6 +134,7 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
   ```
 
 - **Response:**
+
   ```json
   {
     "id": "unique-friction-id",
@@ -146,7 +148,6 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
 
 ---
 
-
 ### Bulk Log Friction Points
 
 **POST** `/v1/friction-points/bulk`
@@ -155,6 +156,7 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
 - **Request Body:** Array of friction point objects (see above).
 
   Example:
+
   ```json
   [
     { "summary": "...", "details": "...", "location": "...", "agent": "..." },
@@ -163,12 +165,11 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
   ```
 
 - **Response:**
+
   ```json
   {
     "logged": ["id1", "id2"],
-    "errors": [
-      { "index": 1, "error": "Missing required field 'summary'" }
-    ]
+    "errors": [{ "index": 1, "error": "Missing required field 'summary'" }]
   }
   ```
 
@@ -176,8 +177,6 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
   - Partial successes are allowed; errors are reported per item.
 
 ---
-
-
 
 ### List Friction Points
 
@@ -212,6 +211,7 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
     }
   ]
   ```
+
 ### Comment on a Friction Point
 
 **POST** `/v1/friction-points/{id}/comments`
@@ -323,6 +323,7 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
 - **Response:** Array of insights or predictions.
 
 ---
+
 ## Attachments
 
 - Attachments can be uploaded via presigned URLs or multipart upload endpoints (e.g., `/v1/friction-points/{id}/attachments`).
@@ -330,6 +331,7 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
 - Attachments metadata includes `filename`, `url`, and `content_type`.
 
 ---
+
 ## Rate Limiting
 
 - Rate limits are enforced per token and returned in headers:
@@ -339,12 +341,14 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
 - Exceeding the limit returns HTTP 429 with an error response.
 
 ---
+
 ## Internationalization / Localization
 
 - Error messages and summaries are returned in English by default.
 - Clients may request a different language via the `Accept-Language` header (future support).
 
 ---
+
 ## Changelog & Deprecation Policy
 
 - Breaking changes are announced at least 90 days in advance.
@@ -354,7 +358,6 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
 ---
 
 ---
-
 
 ### Search Friction Points
 
@@ -367,7 +370,6 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
 - **Response:** Same as List.
 
 ---
-
 
 ### Get Friction Point Details
 
@@ -391,14 +393,11 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
     "status": "open",
     "created_at": "...",
     "updated_at": "...",
-    "history": [
-      { "timestamp": "...", "action": "created", "agent": "...", "notes": "..." }
-    ]
+    "history": [{ "timestamp": "...", "action": "created", "agent": "...", "notes": "..." }]
   }
   ```
 
 ---
-
 
 ### Update or Resolve a Friction Point
 
@@ -414,6 +413,7 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
   - `metadata` (object, optional)
 
   Example:
+
   ```json
   {
     "status": "resolved",
@@ -434,7 +434,6 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
 
 ---
 
-
 ### Query Friction History
 
 **GET** `/v1/history`
@@ -444,7 +443,6 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
 - **Response:** Array of friction point histories (see Data Model).
 
 ---
-
 
 ### Get Analytics
 
@@ -461,12 +459,10 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
     "resolved_count": 105,
     "average_resolution_time": "5 days",
     "common_tags": [
-      {"tag": "workflow", "count": 30},
-      {"tag": "performance", "count": 20}
+      { "tag": "workflow", "count": 30 },
+      { "tag": "performance", "count": 20 }
     ],
-    "friction_by_agent": [
-      {"agent": "model-x", "count": 50}
-    ],
+    "friction_by_agent": [{ "agent": "model-x", "count": 50 }],
     "priority_distribution": {
       "high": 10,
       "medium": 25,
@@ -480,7 +476,6 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
   ```
 
 ---
-
 
 ### Get Suggestions
 
@@ -504,7 +499,6 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
 
 ---
 
-
 ### Export Friction Data
 
 **GET** `/v1/export`
@@ -516,7 +510,6 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
 - **Response:** File download or JSON array.
 
 ---
-
 
 ### Webhooks
 
@@ -534,7 +527,6 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
   - Event filter expressions and retries with exponential backoff are supported.
 
 ---
-
 
 ---
 
@@ -570,13 +562,16 @@ Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `f
 ```js
 import { LubricationClient } from 'mcp-lubrication-sdk'; // example name
 
-const client = new LubricationClient({ token: process.env.MCP_TOKEN, baseUrl: 'https://mcp-lubrication.example' });
+const client = new LubricationClient({
+  token: process.env.MCP_TOKEN,
+  baseUrl: 'https://mcp-lubrication.example',
+});
 
 const resp = await client.log({
   summary: 'CI job failing due to flaky database connections',
   details: 'Intermittent connection timeouts during e2e jobs',
   location: 'repo-name:ci:build#45',
-  agent: 'agent:gpt-4-mini'
+  agent: 'agent:gpt-4-mini',
 });
 console.log('Friction id', resp.id);
 ```
@@ -605,8 +600,6 @@ mcp-lubrication resolve --id <id> --notes "Fixed by reorganizing retry behavior"
 - **Retries:** Configure max retries, exponential backoff, and dead-letter queue (DLQ) for failed webhook deliveries.
 
 ---
-
-
 
 ## Errors & Response Codes
 
@@ -641,6 +634,7 @@ mcp-lubrication resolve --id <id> --notes "Fixed by reorganizing retry behavior"
   - 500: Internal server error
 
 ---
+
 ## Webhook Security Example
 
 Webhook payloads are signed using HMAC SHA256 with a shared secret. Example header:
@@ -648,10 +642,12 @@ Webhook payloads are signed using HMAC SHA256 with a shared secret. Example head
 `X-Hub-Signature-256: sha256=abcdef123456...`
 
 To verify:
+
 1. Compute the HMAC SHA256 of the request body using your secret.
 2. Compare the hex digest to the value in the header.
 
 ---
+
 ## Example Workflows
 
 ### Typical Friction Lifecycle
@@ -668,7 +664,6 @@ To verify:
 
 ---
 
-
 ## MCP Tool and STDIO Integration
 
 In addition to HTTP, `mcp-lubrication` should be usable via the MCP framework (stdio JSON) for agentic models and tools.
@@ -679,13 +674,11 @@ In addition to HTTP, `mcp-lubrication` should be usable via the MCP framework (s
 
 ---
 
-
 ## CI/CD and Auto-Logging
 
 Agents and CI systems can call `POST /v1/ci/log` or `/v1/friction-points` directly with context from the CI system (`job`, `pipeline`, `logs`, `artifacts`). The server will augment entries with `pipeline_id`, `job_id`, `workflow_url`, and attachments as appropriate.
 
 ---
-
 
 ## Deployment & Configuration Notes
 
@@ -738,13 +731,11 @@ Production deployments should mount persistent storage for attachments and use a
 
 ---
 
-
 ## Example OpenAPI & SDK
 
 Provide a companion `openapi.yaml` or `openapi.json` and a minimal client SDK (Node.js, Python) for easy integration.
 
 ---
-
 
 ## Backwards Compatibility & API Versioning
 
@@ -752,7 +743,6 @@ Provide a companion `openapi.yaml` or `openapi.json` and a minimal client SDK (N
 - Support `Accept` header negotiation and deprecation notices with clear timelines.
 
 ---
-
 
 ## Final Notes
 

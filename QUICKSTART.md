@@ -114,6 +114,7 @@ Example MCP configuration (VSCode / Claude-style):
 ```
 
 Notes:
+
 - Ensure `args` points to the built `dist/index.js` entry.
 - MCP clients communicate with the server over stdio.
 
@@ -153,13 +154,16 @@ curl -X POST "http://localhost:PORT/v1/friction-points" \
 ```js
 import { LubricationClient } from 'mcp-lubrication-sdk';
 
-const client = new LubricationClient({ token: process.env.MCP_TOKEN, baseUrl: 'http://localhost:PORT' });
+const client = new LubricationClient({
+  token: process.env.MCP_TOKEN,
+  baseUrl: 'http://localhost:PORT',
+});
 
 const resp = await client.log({
   summary: 'CI job failing due to flaky DB',
   details: 'Intermittent connection timeouts during e2e jobs',
   location: 'repo-name:ci:build#45',
-  agent: 'agent:gpt-4-mini'
+  agent: 'agent:gpt-4-mini',
 });
 console.log('Friction id', resp.id);
 ```
@@ -200,14 +204,19 @@ Note: Adjust commands once a CLI is available or installed.
 ## Useful Commands
 
 Install dependencies:
+
 ```bash
 pnpm install
 ```
+
 Build:
+
 ```bash
 pnpm build
 ```
+
 Quick local run (example):
+
 ```bash
 MCP_TOKEN=devtoken node dist/index.js
 # or use a package script if provided
@@ -215,7 +224,7 @@ MCP_TOKEN=devtoken node dist/index.js
 
 ## Next Steps
 
-- This file mirrors the conventions in `README.md` and `API.md`. If you'd like, I can: 
+- This file mirrors the conventions in `README.md` and `API.md`. If you'd like, I can:
   - shorten or expand CLI examples,
   - add environment variable details, or
   - include a short example of expected server output.

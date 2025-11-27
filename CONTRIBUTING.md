@@ -83,9 +83,9 @@ Follow our coding standards:
 - **State Management**: Ensure Lubrication cycle state is properly managed
 - **Framework Support**: Test with multiple test frameworks
 - **Complexity**: Keep functions under 10 cyclomatic complexity
- - **Complexity**: Keep functions under 10 cyclomatic complexity
- - **Formatting**: Use Prettier (`pnpm format`) (if configured)
- - **Linting**: Follow ESLint rules (`pnpm lint`) (if configured)
+- **Complexity**: Keep functions under 10 cyclomatic complexity
+- **Formatting**: Use Prettier (`pnpm format`) (if configured)
+- **Linting**: Follow ESLint rules (`pnpm lint`) (if configured)
 
 ### 4. Test Your Changes
 
@@ -355,7 +355,10 @@ function validateCycleExists(stateManager: LubricationStateManager): void {
   }
 }
 
-function validatePhaseTransition(stateManager: LubricationStateManager, allowedPhases: LubricationPhase[]): void {
+function validatePhaseTransition(
+  stateManager: LubricationStateManager,
+  allowedPhases: LubricationPhase[],
+): void {
   const currentPhase = stateManager.getCurrentPhase();
   if (!allowedPhases.includes(currentPhase)) {
     throw new Error(
@@ -588,7 +591,10 @@ Document the Lubrication methodology clearly:
  *
  * @throws {Error} When transition is invalid for current phase
  */
-export function advancePhase(fromPhase: LubricationPhase, action: LubricationAction): LubricationPhase {
+export function advancePhase(
+  fromPhase: LubricationPhase,
+  action: LubricationAction,
+): LubricationPhase {
   // Implementation
 }
 ````

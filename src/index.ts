@@ -22,15 +22,23 @@ function notImplementedResponse(feature: string, hints?: string[]) {
 }
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', implemented: false, message: 'Design-time scaffold: implement service to proceed.' });
+  res.json({
+    status: 'ok',
+    implemented: false,
+    message: 'Design-time scaffold: implement service to proceed.',
+  });
 });
 
 app.post('/v1/auth/token', (req, res) => {
   // Design-time placeholder: return machine-friendly instruction
-  res.status(501).json(notImplementedResponse('POST /v1/auth/token', [
-    'Return a scoped token (JWT or opaque) with scopes like friction:read, friction:write',
-    "Example response: { token: '<jwt>', scope: 'friction:write', expires_in: 3600 }",
-  ]));
+  res
+    .status(501)
+    .json(
+      notImplementedResponse('POST /v1/auth/token', [
+        'Return a scoped token (JWT or opaque) with scopes like friction:read, friction:write',
+        "Example response: { token: '<jwt>', scope: 'friction:write', expires_in: 3600 }",
+      ]),
+    );
 });
 
 app.post('/v1/friction-points', (req, res) => {
@@ -64,7 +72,10 @@ app.get('/v1/friction-points/:id', (req, res) => {
   res.status(404).json({
     error_code: 'NotFound',
     message: `Friction point ${req.params.id} not found (design-time scaffold).`,
-    guidance: { openapi: '/openapi.yaml', suggested_action: 'Implement GET /v1/friction-points/{id} to retrieve persisted records' },
+    guidance: {
+      openapi: '/openapi.yaml',
+      suggested_action: 'Implement GET /v1/friction-points/{id} to retrieve persisted records',
+    },
   });
 });
 
@@ -75,9 +86,12 @@ app.use((req, res) => {
 
 app.listen(PORT, () => {
   // Machine-friendly startup message to guide implementers
-  console.log(JSON.stringify({
-    message: 'mcp-lubrication design scaffold running',
-    port: PORT,
-    notice: 'Endpoints return machine-friendly reminders to implement features. See /openapi.yaml and API.md.',
-  }));
+  console.log(
+    JSON.stringify({
+      message: 'mcp-lubrication design scaffold running',
+      port: PORT,
+      notice:
+        'Endpoints return machine-friendly reminders to implement features. See /openapi.yaml and API.md.',
+    }),
+  );
 });
