@@ -4,7 +4,16 @@ This quickstart demonstrates the intended API usage with simple curl examples. T
 
 Prerequisites
 
-- A running implementation of `mcp-lubrication` (not included in this repo). Replace `MCP_URL` and `TOKEN` below with your server URL and token.
+- A running implementation of `mcp-lubrication` (this repository includes a small design-time scaffold). Replace `MCP_URL` and `TOKEN` below with your server URL and token.
+
+Run the scaffold locally (development):
+
+```bash
+pnpm install
+pnpm dev
+```
+
+By default the scaffold listens on port `3000` (configure `MCP_PORT` to change it).
 
 Example: log a friction point
 
