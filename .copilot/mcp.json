@@ -1,0 +1,19 @@
+{
+	"servers": {
+		"mcp-optimist": {
+			"type": "stdio",
+			"command": "node",
+			"args": [
+				"/home/casey/.local/share/GITS/mcp-optimist"
+			]
+		},
+		"mcp-tdd": {
+			"type": "stdio",
+			"command": "node",
+			"args": [
+				"/home/casey/.local/share/GITS/mcp-tdd"
+			]
+		}
+	},
+	"inputs": []
+}

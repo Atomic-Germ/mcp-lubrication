@@ -1,6 +1,6 @@
 import express from 'express';
 
-const app = express();
+const app: express.Express = express();
 app.use(express.json());
 
 const PORT = process.env.MCP_PORT ? Number(process.env.MCP_PORT) : 3000;
@@ -84,14 +84,27 @@ app.use((req, res) => {
   res.status(404).json({ error_code: 'NotFound', message: 'Endpoint not found in scaffold.' });
 });
 
-app.listen(PORT, () => {
-  // Machine-friendly startup message to guide implementers
-  console.log(
-    JSON.stringify({
-      message: 'mcp-lubrication design scaffold running',
-      port: PORT,
-      notice:
-        'Endpoints return machine-friendly reminders to implement features. See /openapi.yaml and API.md.',
-    }),
-  );
-});
+function startServer(port = PORT) {
+  return new Promise<import('http').Server>(resolve => {
+    const server = app.listen(port, () => {
+      // Machine-friendly startup message to guide implementers
+      console.log(
+        JSON.stringify({
+          message: 'mcp-lubrication design scaffold running',
+          port,
+          notice:
+            'Endpoints return machine-friendly reminders to implement features. See /openapi.yaml and API.md.',
+        }),
+      );
+      resolve(server);
+    });
+  });
+}
+
+export { app, startServer };
+
+// If run directly, start the server
+if (require.main === module) {
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises
+  startServer();
+}

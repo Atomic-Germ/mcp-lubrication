@@ -3,10 +3,10 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     // For better Copilot model support
+    reporters: 'dot',
     include: ['test/**/*.ts'],
     globals: true,
     environment: 'node',
-    reporters: ['default', 'json'],
     printConsoleTrace: true,
     coverage: {
       provider: 'v8',
