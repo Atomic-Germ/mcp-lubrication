@@ -1,42 +1,88 @@
-# mcp-lubrication API (Wishlist)
 
-This document describes a proposed API for the `mcp-lubrication` tool, based on its intended use as described in the README. This API is designed for agentic models to log, track, and resolve sources of friction in codebases and developer tools.
+# mcp-lubrication API (v1)
+
+This document describes the API for the `mcp-lubrication` tool, designed for agentic models and developer tools to log, track, and resolve sources of friction in codebases and workflows. The API is machine-oriented, with a focus on automation, auditability, and integration with CI, issue trackers, and other MCP servers.
 
 ---
 
-## Overview
+## Data Model
 
-The `mcp-lubrication` API is machine-oriented, supporting structured, programmatic interaction for logging, querying, and resolving developer friction points.
+All endpoints use a consistent data model for friction points. Field names use `snake_case` throughout. Required fields are marked **(required)**; all others are optional unless otherwise noted.
 
-This server is intended to be used primarily by agentic models (for example, via an `mcp` tool integration) but it also exposes HTTP/REST endpoints for tooling and SDKs. The design emphasizes automation, auditability, and integration with CI systems, issue trackers, and other MCP servers.
+### FrictionPoint
+
+- `id` (string): Unique identifier (UUID)
+- `summary` (string, **required**): Short description (max 240 chars)
+- `details` (string, **required**): Detailed explanation, may include logs or steps to reproduce
+- `location` (string, **required**): File/module/workflow step (e.g., `repo:branch:path:line`)
+- `context` (string): Relevant code, logs, or examples
+- `agent` (string, **required**): Agent/model identifier (e.g., `agent:gpt-4o-mini:2025-11-27`)
+- `tags` (string[]): Tags for categorization
+- `proposed_solution` (string): Initial suggestion for improvement
+- `priority` ("low" | "medium" | "high"): Priority level
+- `status` ("open" | "resolved"): Current status
+- `created_at` (ISO date string): Creation timestamp
+- `updated_at` (ISO date string): Last update timestamp
+- `resolved_at` (ISO date string): Resolution timestamp
+- `history` (array): List of actions (created, updated, resolved)
+
+#### Extended Fields
+- `severity` ("critical" | "major" | "minor"): How blocking the friction is
+- `impact` (string): User or model impact
+- `occurrence_count` (integer): Aggregated count
+- `first_seen` (ISO date string)
+- `last_seen` (ISO date string)
+- `metadata` (object): Free-form key/value for agent or CI context (commit, branch, pipeline ID, environment)
+- `references` (array): External links (e.g., issues, PRs)
+- `attachments` (array): Attachments (filename, url, content_type)
+- `confidence_score` (number [0-1]): Confidence this is a valid friction
+- `is_actionable` (boolean): Whether remediation is actionable
+- `assigned_to` (string): Responsible user or agent
+
+---
+
+## Authentication
+
+All endpoints require authentication via API key or token. Obtain a token via:
+
+**POST** `/v1/auth/token`
+
+Tokens are scoped (e.g., `friction:read`, `friction:write`, `friction:admin`, `friction:apply`). Rate limits are enforced and returned in headers (`X-RateLimit-Limit`, etc.).
 
 ---
 
 ## Endpoints
 
-### 1. Log a Friction Point
 
-**POST** `/friction`
+### Log a Friction Point
 
-- **Description:** Record a new friction point encountered by an agent.
+**POST** `/v1/friction-points`
+
+- **Description:** Record a new friction point encountered by an agent or tool.
 - **Request Body:**
+  - `summary` (string, required)
+  - `details` (string, required)
+  - `location` (string, required)
+  - `context` (string, optional)
+  - `agent` (string, required)
+  - `tags` (string[], optional)
+  - `proposed_solution` (string, optional)
+  - `priority` ("low" | "medium" | "high", optional)
+
+  Example:
   ```json
   {
     "summary": "Short description of the friction",
     "details": "Detailed explanation of the issue or confusion",
-    "location": "File, module, or workflow step where friction occurred",
+    "location": "repo:main:src/index.ts:42",
     "context": "Relevant code, logs, or examples",
-    "agent": "Agent/model identifier",
-    "tags": ["confusing-api", "workflow", "performance"],
-    "proposed_solution": "Optional: initial suggestion for improvement",
-    "priority": "low|medium|high"  // Optional: priority level
+    "agent": "agent:gpt-4o-mini:2025-11-27",
+    "tags": ["confusing-api", "workflow"],
+    "proposed_solution": "Clarify parameter order in docs",
+    "priority": "medium"
   }
   ```
-  - **Notes/Guidance:**
-    - `summary` should be a concise statement of the core friction (max 240 chars).
-    - `details` may include stack traces, log excerpts, or precise steps to reproduce.
-    - `location` can include `repo:branch:path:line` or human friendly descriptions.
-    - `agent` should indicate the caller model or tool, e.g. `agent:gpt-4o-mini:2025-11-27`.
+
 - **Response:**
   ```json
   {
@@ -45,59 +91,63 @@ This server is intended to be used primarily by agentic models (for example, via
   }
   ```
 
+- **Notes:**
+  - `location` should follow `repo:branch:path:line` for traceability.
+  - All required fields must be present; optional fields may be omitted.
+
 ---
 
-### 1.5. Bulk Log Friction Points
 
-**POST** `/friction/bulk`
+### Bulk Log Friction Points
 
-- **Description:** Record multiple friction points in a single request for efficiency during batch processing.
-- **Request Body:**
+**POST** `/v1/friction-points/bulk`
+
+- **Description:** Record multiple friction points in a single request.
+- **Request Body:** Array of friction point objects (see above).
+
+  Example:
   ```json
   [
-    {
-      "summary": "...",
-      "details": "...",
-      "location": "...",
-      "context": "...",
-      "agent": "...",
-      "tags": ["..."],
-      "proposed_solution": "...",
-      "priority": "medium"
-    },
-    // ... more friction points
+    { "summary": "...", "details": "...", "location": "...", "agent": "..." },
+    { "summary": "...", "details": "...", "location": "...", "agent": "..." }
   ]
   ```
+
 - **Response:**
   ```json
   {
-    "logged": ["id1", "id2", ...],
-    "errors": []  // Any validation errors
+    "logged": ["id1", "id2"],
+    "errors": [
+      { "index": 1, "error": "Missing required field 'summary'" }
+    ]
   }
   ```
 
-  - **Notes/Guidance:** Bulk logging should be validated server-side; partial successes should return explicit error entries describing which items failed validation.
+- **Notes:**
+  - Partial successes are allowed; errors are reported per item.
 
 ---
 
-### 2. List Friction Points
 
-**GET** `/friction`
+### List Friction Points
+
+**GET** `/v1/friction-points`
 
 - **Description:** Retrieve a list of all logged friction points, with optional filters.
 - **Query Parameters:**
-  - `status` (open, resolved, all)
-  - `tag`
-  - `agent`
-  - `priority` (low, medium, high)
-  - `location` (partial match)
+  - `status` ("open", "resolved", "all")
+  - `tag` (string)
+  - `agent` (string)
+  - `priority` ("low", "medium", "high")
+  - `location` (partial match, string)
   - `created_after` (ISO date)
   - `created_before` (ISO date)
-  - `repo` (repo/name)
-  - `branch`
-  - `limit` (max results, default 50)
-  - `offset` (for pagination)
-- **Response:**
+  - `repo` (string)
+  - `branch` (string)
+  - `limit` (integer, default 50)
+  - `offset` (integer, for pagination)
+
+- **Response:** Array of friction point summaries.
   ```json
   [
     {
@@ -108,29 +158,32 @@ This server is intended to be used primarily by agentic models (for example, via
       "tags": ["..."],
       "priority": "high"
     }
-    // ...
   ]
   ```
 
 ---
 
-### 2.5. Search Friction Points
 
-**GET** `/friction/search`
+### Search Friction Points
+
+**GET** `/v1/friction-points/search`
 
 - **Description:** Advanced search with full-text query across summary, details, and context.
 - **Query Parameters:**
-  - `q` (search query)
-  - Other filters as in List
+  - `q` (string, search query)
+  - All filters as in List
 - **Response:** Same as List.
 
 ---
 
-### 3. Get Friction Point Details
 
-**GET** `/friction/{id}`
+### Get Friction Point Details
+
+**GET** `/v1/friction-points/{id}`
 
 - **Description:** Retrieve full details for a specific friction point.
+- **Query Parameters:**
+  - `include` (comma-separated: `attachments`, `metadata`)
 - **Response:**
   ```json
   {
@@ -147,35 +200,38 @@ This server is intended to be used primarily by agentic models (for example, via
     "created_at": "...",
     "updated_at": "...",
     "history": [
-      {
-        "timestamp": "...",
-        "action": "created|updated|resolved",
-        "agent": "...",
-        "notes": "..."
-      }
+      { "timestamp": "...", "action": "created", "agent": "...", "notes": "..." }
     ]
   }
   ```
 
-    - **Related:** Requests for full details may optionally accept a query parameter `include=attachments,metadata` to include potentially large or sensitive fields.
-
 ---
 
-### 4. Update or Resolve a Friction Point
 
-**PATCH** `/friction/{id}`
+### Update or Resolve a Friction Point
+
+**PATCH** `/v1/friction-points/{id}`
 
 - **Description:** Update details, propose a solution, or mark a friction point as resolved.
 - **Request Body:**
+  - `status` ("resolved", optional)
+  - `resolution_notes` (string, optional)
+  - `resolved_by` (string, optional)
+  - `tags` (string[], optional)
+  - `priority` ("low" | "medium" | "high", optional)
+  - `metadata` (object, optional)
+
+  Example:
   ```json
   {
     "status": "resolved",
     "resolution_notes": "Description of the fix or improvement",
-    "resolved_by": "Agent/model identifier",
-    "tags": ["updated-tag"],  // Optional: update tags
-    "priority": "low"  // Optional: change priority
+    "resolved_by": "agent:gpt-4o-mini:2025-11-27",
+    "tags": ["updated-tag"],
+    "priority": "low"
   }
   ```
+
 - **Response:**
   ```json
   {
@@ -184,23 +240,23 @@ This server is intended to be used primarily by agentic models (for example, via
   }
   ```
 
-  - **Metadata handling:** The `PATCH` endpoint accepts `metadata` to store contextual data used by agents and analytics. For example, `metadata` may include `repo`, `commit`, `pipeline_id` and `run_id`.
-
 ---
 
-### 5. Query Friction History
 
-**GET** `/history`
+### Query Friction History
+
+**GET** `/v1/history`
 
 - **Description:** Retrieve a machine-readable log of all friction points and their resolution history.
-- **Query Parameters:** Same filters as List.
-- **Response:** (Array of friction point histories, as above.)
+- **Query Parameters:** Same as List.
+- **Response:** Array of friction point histories (see Data Model).
 
 ---
 
-### 6. Get Analytics
 
-**GET** `/analytics`
+### Get Analytics
+
+**GET** `/v1/analytics`
 
 - **Description:** Retrieve statistics and insights on friction points for reporting and prioritization.
 - **Query Parameters:**
@@ -223,103 +279,72 @@ This server is intended to be used primarily by agentic models (for example, via
       "high": 10,
       "medium": 25,
       "low": 10
+    },
+    "trend": {
+      "workflow": "upward",
+      "performance": "downward"
     }
   }
   ```
 
-  - **Optional insights:** Analytics can optionally return a `trend` object for each tag or agent, e.g. an upward or downward trend and the top contributed causes.
-
 ---
 
-### 7. Get Suggestions
 
-**GET** `/suggestions`
+### Get Suggestions
+
+**GET** `/v1/suggestions`
 
 - **Description:** Provide AI-generated suggestions for resolving open friction points or preventing similar issues, based on historical data.
 - **Query Parameters:**
-  - `id` (specific friction point for tailored suggestions)
+  - `id` (string, specific friction point)
 - **Response:**
   ```json
   [
     {
       "friction_id": "id",
       "suggestion": "Refactor the API to use clearer naming conventions.",
-      "confidence": 0.85
+      "confidence": 0.85,
+      "proposal_patch": "...", // optional
+      "code_diff": "..." // optional
     }
   ]
   ```
 
-  - **Execution:** Suggestions may optionally include a `proposal_patch` or `code_diff` field; `apply_suggestion` requests will be gated and require authorization (see Authentication below).
-
 ---
 
-### 8. Export Friction Data
 
-**GET** `/export`
+### Export Friction Data
+
+**GET** `/v1/export`
 
 - **Description:** Export friction points in various formats for external analysis.
 - **Query Parameters:**
-  - `format` (json, csv)
-  - Other filters as in List.
+  - `format` ("json", "csv")
+  - All filters as in List
 - **Response:** File download or JSON array.
 
 ---
 
-### 9. Webhooks
 
-**POST** `/webhooks/friction-logged`
+### Webhooks
 
-- **Description:** Notify external systems when a new friction point is logged (configurable endpoint).
+**POST** `/v1/webhooks/friction-logged`
+
+- **Description:** Notify external systems when a new friction point is logged.
 - **Request Body:** Friction point data.
 
-**POST** `/webhooks/friction-resolved`
+**POST** `/v1/webhooks/friction-resolved`
 
 - **Description:** Notify when a friction point is resolved.
 
-  - **Notes/Guidance:** Webhooks should support HMAC signing (e.g., using a per-webhook secret) and can be configured with an event filter expression. Retries should be attempted with exponential backoff on 5xx responses.
+- **Notes:**
+  - Webhooks support HMAC signing (e.g., `X-Hub-Signature`-style) with a per-webhook secret.
+  - Event filter expressions and retries with exponential backoff are supported.
 
 ---
 
-## Authentication
-
-- Agents should authenticate using API keys or tokens to prevent abuse.
-- **POST** `/auth/token` to obtain a token for an agent.
-
-  - **RBAC & Scopes:** Consider scopes such as `friction:read`, `friction:write`, `friction:admin`, and `friction:apply` (for automated code modifications). Tokens issued to agents should be scoped and optionally limited by origin.
-  - **Rate limiting & quotas:** Each agent should have a token-based quota with headers like `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` returned in API responses.
 
 ---
-
-## Data Model
-
-- **FrictionPoint**
-  - `id`: string (UUID)
-  - `summary`: string
-  - `details`: string
-  - `location`: string
-  - `context`: string
-  - `agent`: string
-  - `tags`: string[]
-  - `proposed_solution`: string
-  - `priority`: "low" | "medium" | "high"
-  - `status`: "open" | "resolved"
-  - `created_at`: ISO date string
-  - `updated_at`: ISO date string
-  - `resolved_at`: ISO date string (optional)
-  - `history`: array of actions (created, updated, resolved)
-
-  - **Extended fields** (optional but recommended):
-    - `severity`: "critical" | "major" | "minor" — a classifier of how blocking the friction is.
-    - `impact`: text describing the user or model impact.
-    - `occurrence_count`: integer — how many times this friction was recorded for aggregation.
-    - `first_seen`: ISO date string
-    - `last_seen`: ISO date string
-    - `metadata`: object — free-form key/value for agent or CI context (commit, branch, pipeline ID, environment).
-    - `references`: array of objects linking to external issue tracker items, PRs, or docs: `{ "type": "github", "url": "https://...", "id": 123 }`.
-    - `attachments`: array of objects `{ "filename": string, "url": string, "content_type": string }`.
-    - `confidence_score`: number [0-1] — confidence that this is a valid friction for consideration.
-    - `is_actionable`: boolean — whether an automated agent or human should treat it as actionable.
-    - `assigned_to`: string — user or agent responsible for remediation.
 
 ---
 
@@ -389,77 +414,82 @@ mcp-lubrication resolve --id <id> --notes "Fixed by reorganizing retry behavior"
 
 ---
 
+
 ## Errors & Response Codes
 
-- Common error responses should follow a structured pattern:
-
-```json
-{
-  "error": "BadRequest",
-  "message": "Missing or invalid field 'summary'",
-  "fields": ["summary"]
-}
-```
-
-- Recommended status codes:
+- All error responses use a consistent structure:
+  ```json
+  {
+    "error_code": "BadRequest",
+    "message": "Missing or invalid field 'summary'",
+    "fields": ["summary"]
+  }
+  ```
+- Status codes:
   - 200: OK
   - 201: Created
   - 400: Bad request/validation errors
   - 401: Unauthorized
   - 403: Forbidden
   - 404: Not found
-  - 429: Rate limit
-  - 500: Internal error
+  - 429: Rate limit exceeded
+  - 500: Internal server error
 
 ---
+
 
 ## MCP Tool and STDIO Integration
 
-Aside from HTTP, `mcp-lubrication` should be usable via the MCP framework (stdio JSON) for in-tool agentic models. Design notes:
-- Offer a `tool` and `tool.capabilities` descriptor for the MCP system.
-- Include an `invoke` API like `tool.invoke('friction.log', payload)` and `tool.invoke('friction.search', params)` for synchronous operations.
-- For async or streaming workflows, support event streams and subscription patterns via `tool.listen` (or similar) for `friction.*` events.
+In addition to HTTP, `mcp-lubrication` should be usable via the MCP framework (stdio JSON) for agentic models and tools.
+
+- Provide a `tool` and `tool.capabilities` descriptor for MCP.
+- Support `tool.invoke('friction.log', payload)` and `tool.invoke('friction.search', params)` for synchronous operations.
+- For async/streaming, support event streams and subscription patterns via `tool.listen('friction.*')`.
 
 ---
+
 
 ## CI/CD and Auto-Logging
 
-Agents and CI systems should be able to call `POST /ci/log` or `/friction` directly with context passed from the CI system (`job, pipeline, logs, artifacts`). The server will augment the entry with `pipeline_id`, `job_id`, `workflow_url`, and attachments as appropriate.
+Agents and CI systems can call `POST /v1/ci/log` or `/v1/friction-points` directly with context from the CI system (`job`, `pipeline`, `logs`, `artifacts`). The server will augment entries with `pipeline_id`, `job_id`, `workflow_url`, and attachments as appropriate.
 
 ---
+
 
 ## Deployment & Configuration Notes
 
-The `README.md` includes a simple example `mcp.json` for VSCode. Additional configuration guidance:
-- Environment variables for deployment: `MCP_PORT`, `MCP_BASE_URL`, `DB_CONN`, `JWT_SECRET`, `WEBHOOK_SECRET`.
-- Provide `--config` or `--mcp-config` flags for the CLI.
-- Minimal requirement: database (sqlite, postgres), option for local/disk storage for attachments.
+- See `README.md` for an example `mcp.json` for VSCode.
+- Environment variables: `MCP_PORT`, `MCP_BASE_URL`, `DB_CONN`, `JWT_SECRET`, `WEBHOOK_SECRET`.
+- CLI supports `--config` or `--mcp-config` flags.
+- Minimal requirement: database (sqlite, postgres); local/disk storage for attachments is supported.
 
 ---
+
 
 ## Example OpenAPI & SDK
 
-Provide a companion `openapi.yaml` or `openapi.json` and a minimal client SDK (node, python) so integrators can easily interact with the system.
+Provide a companion `openapi.yaml` or `openapi.json` and a minimal client SDK (Node.js, Python) for easy integration.
 
 ---
 
+
 ## Backwards Compatibility & API Versioning
 
-- Use a versioned API prefix, e.g. `/v1/friction`.
+- All endpoints use a versioned prefix, e.g., `/v1/friction-points`.
 - Support `Accept` header negotiation and deprecation notices with clear timelines.
 
 ---
 
+
 ## Final Notes
 
-This API is primarily aimed for programmatic usage by agent models and CI systems, but it exposes human-friendly CLI and SDK options to support developers integrating the system. The above changes expand the core resource model, add practical operational concerns (rate limiting, audit, webhooks), and suggest integrations that will reduce developer friction across the lifecycle of issues.
+This API is designed for programmatic use by agentic models, CI systems, and developer tools, with human-friendly CLI and SDK options. The design prioritizes clarity, consistency, automation, and scalability for high-volume, machine-driven workflows.
 
 ---
 
-## Notes
+## Additional Notes
 
-- All endpoints are designed for programmatic use by agentic models.
-- The API should support bulk operations for efficiency.
-- Machine-readable output is prioritized for downstream automation and reporting.
-- Prioritize scalability for high-volume logging in large codebases.
+- All endpoints are programmatic and support bulk operations.
+- Machine-readable output is prioritized for automation and reporting.
+- Designed for scalability in large codebases.
 - Ensure GDPR/CCPA compliance for any personal data in context fields.
